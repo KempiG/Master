@@ -10,7 +10,7 @@ df = pd.DataFrame(x,y)
 
 fig = plt.figure()
 ax = fig.add_subplot(1,1,1)
-plt.scatter(x,y,'r')
+plt.scatter(x,y,color='r')
 plt.title('Dit is een testafbeelding')
 plt.xlabel('x')
 plt.ylabel('y')
