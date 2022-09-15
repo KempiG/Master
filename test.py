@@ -6,7 +6,7 @@ import streamlit as st
 
 x = [1,2,3,5,1,2,2,4]
 y = [2,3,4,2,5,7,4,2]
-df = pd.DataFrame({'x'=x,'y'=y})
+df = pd.DataFrame({"x" = x,"y"=y})
 st.write(df)
 
 
