@@ -98,7 +98,7 @@ def show_preview(frame):
                          scale,
                          help='Choose from the list what you want to plot in the figure below', index=8)
     
-    temp_options = range(1,choose_scale.max())
+    temp_options = range(1,25)
     temp = st.select_slider("Choose a range", options=temp_options)
     st.write("The range is",temp)
     
