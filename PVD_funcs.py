@@ -105,7 +105,7 @@ def show_preview(frame):
     fig = px.scatter(data_frame = frame,
                      x=frame['X [m]'],
                      y=frame['Y [m]'],
-                     color=choose_scale, 
+                     color=Max_depth_color, #voorheen "choose_scale" 
                      color_continuous_scale='turbo')
     
    
