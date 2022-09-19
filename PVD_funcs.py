@@ -98,8 +98,8 @@ def show_preview(frame):
                          scale,
                          help='Choose from the list what you want to plot in the figure below', index=8)
      
-    Max_depth_color = frame[frame['Max. depth [m]']>5]['Max. depth [m]']
-    #Max_depth_color = Max_depth_
+    Max_depth_color = frame[frame['Max. depth [m]']>5]
+    Max_depth_color = Max_depth_color['Max.depth [m]']
     st.write(Max_depth_color)
         
     fig = px.scatter(data_frame = frame,
