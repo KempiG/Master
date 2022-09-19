@@ -110,11 +110,6 @@ def show_preview(frame):
     temp_options = range(1,25)
     temp = st.select_slider("Choose a range", options=temp_options)
     st.write("The range is",temp)
-    fig = px.scatter(data_frame = frame,
-                     x=frame['X [m]'],
-                     y=frame['Y [m]'],
-                     color=temp, 
-                     color_continuous_scale='turbo')
 
                      
     fig.update_yaxes(scaleanchor='x', scaleratio=1)
