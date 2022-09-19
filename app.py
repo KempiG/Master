@@ -15,7 +15,7 @@ st.set_page_config(layout="wide")
 #st.markdown('<style>body{background-color: #D1D1D1;}</style>',unsafe_allow_html=True)
 
 header1, header2 = st.columns([1,5])
-image1 = Image.open('BOS_Cofra_Logo_RGB.png')
+image1 = Image.open('Cofra_logo.png')
 header1.image(image1, width=100)
 
 def main():
