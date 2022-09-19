@@ -97,6 +97,11 @@ def show_preview(frame):
     choose_scale = st.selectbox('Choose plot parameter:',
                          scale,
                          help='Choose from the list what you want to plot in the figure below', index=8)
+    
+    temp_options = range(1,choose_scale.max())
+    temp = st.select_slider("Choose a range", options=temp_options)
+    st.write("The range is",temp)
+    
     fig = px.scatter(data_frame = frame,
                      x=frame['X [m]'],
                      y=frame['Y [m]'],
