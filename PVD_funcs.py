@@ -99,7 +99,7 @@ def show_preview(frame):
                          help='Choose from the list what you want to plot in the figure below', index=8)
      
     Max_depth_color = frame[frame['Max. depth [m]']>5]
-    Max_depth_color = Max_depth_color['Max. depth [m]']
+    #Max_depth_color = Max_depth_color['Max. depth [m]']
     st.write(Max_depth_color)
         
     fig = px.scatter(data_frame = frame,
@@ -108,12 +108,7 @@ def show_preview(frame):
                      color=choose_scale, 
                      color_continuous_scale='turbo')
     
-    
-    
-    # trial
-    temp_options = range(1,25)
-    temp = st.select_slider("Choose a range", options=temp_options)
-    st.write("The range is",temp)
+   
 
                      
     fig.update_yaxes(scaleanchor='x', scaleratio=1)
