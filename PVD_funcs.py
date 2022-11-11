@@ -12,6 +12,98 @@ import plotly.graph_objs as go
 #import altair as alt
 #from bokeh.plotting import figure
 
+def list_ext(uploads, radio3):
+    list_ = []
+    header_default = ["date [YYYYMMDD]",
+                          "time [HHMMSS]",
+                          "X [m]",
+                          "Y [m]",
+                          "Z [m]",
+                          "Drain nr. [-]",
+                          "Job nr. [-]",
+                          "Base unit [-]",
+                          "Operator [-]",
+                          "Stitcher type [-]",
+                          "Stitcher length [m]",
+                          "Stitcher ballast [ton]",
+                          "Drain type [-]",
+                          "Anchoring [-]",
+                          "Pattern type [0=square/1=triang.]",
+                          "Pattern distance [m]",
+                          "Pattern heading [deg]",
+                          "Pattern X-position [m]",
+                          "Pattern Y-position [m]",
+                          "Prescribed depth [m]",
+                          "Max. depth [m]",
+                          "Pull back [m]",
+                          "Cum. drain length [m]",
+                          "Duration [s]",
+                          "Max. force [kN]",
+                          "Stitcher angle [deg]",
+                          "ok",
+                          "new roll",
+                          "canceled",
+                          "Log interval [m]",
+                          "Data nr. [-]",
+                          "Force [kN]"] 
+    df_default = pd.DataFrame(columns=header_default)
+    
+    for file_ in uploads:
+        for headerline in file_:
+            headerline = str(headerline)
+            if '#date' in headerline:
+                break
+        headerline = headerline[:-3]
+        headerlist = headerline.replace("b'#", "").split(',')  
+        
+        if 'Remarks' in headerlist:
+            headerlist.remove('Remarks')
+            headerlist.remove('')
+            for index, item in enumerate(headerlist):
+                if ' [ok' in item:
+                    headerlist[index] = 'ok'
+                if 'canceled]' in item:
+                    headerlist[index] = 'canceled'
+                    
+        df = pd.read_csv(file_, index_col=False, header=None)
+        
+        nums = list(range(len(headerlist)))
+        headerdict = dict(zip(nums, headerlist))    
+        df = df.rename(columns=headerdict)
+        df = df.rename(columns={' Drain nr. [-]' : 'Drain nr. [-]'})
+        
+        force_1_loc = df.columns.get_loc('Force [kN]')
+        df_force = df.iloc[:, force_1_loc+1:-1]
+        for col in range(len(df_force.columns)):
+            df_force = df_force.rename(columns={df_force.columns[col] : f'Force_{col+2}'})
+            
+        if radio3 == 'Default columns (recommended)':
+
+            if not header_default == headerlist:
+                df = pd.concat([df_default, df])
+
+            for col in df.columns:
+                if col not in header_default:
+                    df = df.drop([col], axis=1)
+        elif radio3 == 'Columns from file':
+            for col in df.columns:
+                if type(col) == int:
+                    df = df.drop([col], axis=1)
+            
+        df = pd.concat([df, df_force], axis=1)
+        
+        #####
+        list_.append(df)
+        
+    ### Sort list_ on df with most columns ##
+    a = max([x.shape[1] for x in list_])
+    indexa = [x.shape[1] for x in list_].index(a)
+    longest = list_[indexa]
+    del list_[indexa]
+    list_.insert(0, longest)
+    
+    return list_, headerlist
+
 
 def convert(list_, headerlist, wp_calc_method, fixed_nr):
     
@@ -25,11 +117,13 @@ def convert(list_, headerlist, wp_calc_method, fixed_nr):
     frame = frame.sort_values(['Base unit [-]', 'date [YYYYMMDD]', 'time [HHMMSS]'])
     
         ## Add date and time columns ##
+    #date_text = frame['date [YYYYMMDD]']
     frame['date [YYYYMMDD]'] = pd.to_datetime(frame['date [YYYYMMDD]'], format='%Y%m%d').dt.date
     frame['time [HHMMSS]'] = frame['time [HHMMSS]'].astype(int)
     for pvd in frame.index:
         if len(str(frame.loc[pvd, 'time [HHMMSS]'])) < 6:
             frame.loc[pvd, 'time [HHMMSS]'] = (6 - len(str(frame.loc[pvd, 'time [HHMMSS]']))) * '0' + str(frame.loc[pvd, 'time [HHMMSS]'])
+    time_text = frame['time [HHMMSS]'].copy()
     frame['time [HHMMSS]'] = pd.to_datetime(frame['time [HHMMSS]'], format='%H%M%S').dt.time
 
         ## Cable tension + wp thickness ##
@@ -68,19 +162,85 @@ def convert(list_, headerlist, wp_calc_method, fixed_nr):
         
         wp_frame['csx'] = [528374]*len(frame)
         wp_frame['csy'] = [507360]*len(frame)
-        
-    frame['Z [m]'] = frame['Z [m]'].astype(float)
-    frame['Drain nr. [-]'] = frame['Drain nr. [-]'].astype(float)
-    frame['Max. depth [m]'] = frame['Max. depth [m]'].astype(float)
-    frame['Max. force [kN]'] = frame['Max. force [kN]'].astype(float)    
-    frame['Prescribed depth [m]'] = frame['Prescribed depth [m]'].astype(float)
-    frame['Stitcher angle [deg]'] = frame['Stitcher angle [deg]'].astype(float)
     
-    return frame, wp_frame
+    tofloat = ['Z [m]',
+               'Drain nr. [-]',
+               'Max. depth [m]',
+               'Max. force [kN]',
+               'Prescribed depth [m]',
+               'Stitcher angle [deg]']
+    
+    for col in tofloat:
+        if col in frame.columns:
+            frame[col] = frame[col].astype(float)
+        else:
+            continue
+    return frame, time_text 
+ 
 
-# from streamlit_plotly_events import plotly_events
+def show_delay(frame_filtered, delta, start_time, end_time, date, base_unit):
+    
+    time_text = frame_filtered['time_text']
+    time_text = pd.concat([start_time, time_text, end_time])
+    time_text = list(pd.to_datetime(time_text, format='%H%M%S'))
 
+    start = time_text[:-1].copy()
+    end = time_text[1:].copy()
+
+    fig, ax = plt.subplots(figsize=[18,3], facecolor='white')
+    periods = []
+    for pvd in range(len(start)):
+        periods.append((start[pvd], end[pvd] - start[pvd]))
+    
+    periods_op = [tup for tup in periods if tup[1] <= np.timedelta64(int(delta), 's')]
+    periods_delay = [tup for tup in periods if tup[1] > np.timedelta64(int(delta), 's')]
+    
+    ax.broken_barh(
+        periods_delay,
+        (0.1, 0.2),
+        color='#FF6861',
+        #edgecolor="black"
+    )
+
+    ax.broken_barh(
+        periods_op,
+        (-0.1, 0.2),
+        color='green',
+        # edgecolor="black"
+    )
+    
+    ax.set_yticks([0, 0.2])
+    ax.set_yticklabels(['Operational', 'Delay'])
+    ax.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
+    fig.suptitle(f'{date} - {base_unit}', fontsize=20)
+    ax.grid(linestyle="--")
+    fig.autofmt_xdate()    
+    st.write(fig)   
+
+    total_op = total_delay = datetime.timedelta()
+    for pvd in periods_op:
+        total_op += pvd[1]
+    for pvd in periods_delay:
+        total_delay += pvd[1]    
+    st.write('Operational time: ', str((datetime.datetime.min + total_op).time()))
+    st.write('Delay time: ', str((datetime.datetime.min + total_delay).time()))
+    
+    st.write('Efficiency: ', str(round(100 * total_op.total_seconds() / (total_op.total_seconds() + total_delay.total_seconds()))), '%')
+  
+    fn = f'{date} - {base_unit}.png'
+    img = io.BytesIO()
+    plt.savefig(img, format='png')
+     
+    st.download_button(
+       label='Download as image',
+       data=img,
+       file_name=fn,
+       mime='image/png'
+    )   
+    
+  
 def show_preview(frame):
+    
     scale = ["date [YYYYMMDD]",
                           "time [HHMMSS]",
                           "Z [m]",
@@ -93,32 +253,28 @@ def show_preview(frame):
                           "Max. force [kN]",
                           "Stitcher angle [deg]"] 
     
-    st.write('**Preview:**')
+    
     choose_scale = st.selectbox('Choose plot parameter:',
                          scale,
                          help='Choose from the list what you want to plot in the figure below', index=8)
-     
-    #Max_depth_color = frame[frame['Max. depth [m]']>1.5]['Max. depth [m]']
-    #Max_depth_color = Max_depth_color['Max. depth [m]']
-    #st.write(Max_depth_color)
     
     frame.columns[10] == choose_scale
     if choose_scale in frame.columns:
         fig = px.scatter(data_frame = frame,
-                     x=frame['X [m]'],
-                     y=frame['Y [m]'],
-                     color=choose_scale
-                     color_continuous_scale='turbo')
+                         x=frame['X [m]'],
+                         y=frame['Y [m]'],
+                         color=choose_scale, 
+                         color_continuous_scale='turbo')
+                         
+        fig.update_yaxes(scaleanchor='x', scaleratio=1)
+        st.write(fig)
+    else:
+        st.write(f'{choose_scale} not found')
     
-   
-
-                     
-    fig.update_yaxes(scaleanchor='x', scaleratio=1)
-    st.write(fig)
+    # from streamlit_plotly_events import plotly_events
     # clickedPoint = plotly_events(fig, key="line")
     # st.write(f"Clicked Point: {clickedPoint}")
         
-    
     
 def show_wp(wp_frame, cs):
     # st.write('**Working platform thickness:**')
@@ -156,36 +312,4 @@ def show_wp(wp_frame, cs):
     # st.write(fig3)
 
     
-    
-    
-# def show_preview_altair(frame):
-#     st.write('**Preview:**')
-#     plotframe = frame[['X [m]', 'Y [m]', 'Max. depth [m]']].copy()    
-#     plotframe = plotframe.rename(columns={'X [m]': 'X',
-#                                           'Y [m]': 'Y',
-#                                           'Max. depth [m]': 'Max_depth'})
-
-#     a = alt.Chart(plotframe).mark_circle().encode(alt.X('X', 
-#                                                         scale=alt.Scale(domain=(plotframe['X'].min(), 
-#                                                                                      plotframe['X'].max()))), 
-#                                                   alt.Y('Y',
-#                                                         scale=alt.Scale(domain=(plotframe['Y'].min(), 
-#                                                                                      plotframe['Y'].max()))),
-#                                                   color=alt.Color('Max_depth', scale=alt.Scale(scheme='turbo'))).interactive()
-    
-#     st.altair_chart(a, use_container_width=True)
-
-# def show_preview_bokeh(frame):
-#     st.write('**Preview:**')
-#     plotframe = frame[['X [m]', 'Y [m]', 'Max. depth [m]']].copy()    
-#     plotframe = plotframe.rename(columns={'X [m]': 'X',
-#                                           'Y [m]': 'Y',
-#                                           'Max. depth [m]': 'Max_depth'})    
-#     p = figure(title='simple line example', 
-#                x_axis_label='X',
-#                y_axis_label='Y',
-              
-#                match_aspect=True)
-#     p.circle(source=plotframe, x='X', y='Y')
-#     st.bokeh_chart(p, use_container_width=True)
     
