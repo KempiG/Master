@@ -104,7 +104,7 @@ def show_preview(frame):
     
     frame.columns[10] == choose_scale
     if choose_scale in frame.columns:
-    fig = px.scatter(data_frame = frame,
+        fig = px.scatter(data_frame = frame,
                      x=frame['X [m]'],
                      y=frame['Y [m]'],
                      color=choose_scale
