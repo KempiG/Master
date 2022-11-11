@@ -101,7 +101,9 @@ def show_preview(frame):
     #Max_depth_color = frame[frame['Max. depth [m]']>1.5]['Max. depth [m]']
     #Max_depth_color = Max_depth_color['Max. depth [m]']
     #st.write(Max_depth_color)
-        
+    
+    frame.columns[10] == choose_scale
+    if choose_scale in frame.columns:
     fig = px.scatter(data_frame = frame,
                      x=frame['X [m]'],
                      y=frame['Y [m]'],
