@@ -10,13 +10,25 @@ from PIL import Image
 import CDC_funcs
 import CRC_funcs
 import PVD_funcs
+import datetime
 
-st.set_page_config(layout="wide")
+st.set_page_config(layout="wide", 
+                   page_icon='logos/cofra_icon2.ico',
+                   page_title='Cofra data processing',
+                   menu_items={'Get help' : 'mailto:kaj.althuis@cofra.com',
+                               'Report a Bug' : 'mailto:kaj.althuis@cofra.com'}
+                   )
 #st.markdown('<style>body{background-color: #D1D1D1;}</style>',unsafe_allow_html=True)
 
 header1, header2 = st.columns([1,5])
-image1 = Image.open('Cofra_logo.PNG')
-header1.image(image1, width=100)
+image1 = Image.open('Cofra_Logo_01_RGB_Color.png')
+header1.image(image1, width=150)
+
+horizontal_line = '''
+            
+    ---
+    
+    '''
 
 def main():
     
@@ -54,12 +66,7 @@ def main():
             col1, col2 = st.columns([2,4])
             start_button = col1.button('Process .log files', key='1')
             
-            text = '''
-                        
-                ---
-                
-                '''
-            st.markdown(text)
+            st.markdown(horizontal_line)
             
             if start_button:
                 with st.spinner(text='In progress...'):
@@ -75,12 +82,7 @@ def main():
                                                                           'Click here to download excel file!')
                     st.markdown(tmp_download_link, unsafe_allow_html=True)                    
                     
-                text = '''
-                        
-                ---
-                
-                '''
-                st.markdown(text)
+                st.markdown(horizontal_line)
                 
                 CDC_funcs.show_preview(frame)
                 st.success('Done!')
@@ -162,12 +164,7 @@ def main():
             
             start_button = st.button('Process files', key='1')
             
-            text = '''
-                    
-            ---
-            
-            '''
-            st.markdown(text)            
+            st.markdown(horizontal_line)            
             
             if start_button:
                 with st.spinner(text='In progress...'):
@@ -209,12 +206,7 @@ def main():
                     if log_present:
                         st.markdown(download_link_log, unsafe_allow_html=True)
                      
-                text = '''
-                        
-                ---
-                
-                '''
-                st.markdown(text)
+                st.markdown(horizontal_line)
                 
                 CRC_funcs.show_preview(output)
                 st.success('Done!')
@@ -244,6 +236,7 @@ def main():
         # elif radio2 == 'No':
         #     wp_select = 'No'
         #     fixed_nr = 'No'
+        
         wp_select = 'No'
         fixed_nr = 'No'
         
@@ -261,93 +254,7 @@ def main():
             st.write(f' **{len(uploads)}** files imported')
             
         if len(uploads) > 0:
-            list_ = []
-            header_default = ["date [YYYYMMDD]",
-                                  "time [HHMMSS]",
-                                  "X [m]",
-                                  "Y [m]",
-                                  "Z [m]",
-                                  "Drain nr. [-]",
-                                  "Job nr. [-]",
-                                  "Base unit [-]",
-                                  "Operator [-]",
-                                  "Stitcher type [-]",
-                                  "Stitcher length [m]",
-                                  "Stitcher ballast [ton]",
-                                  "Drain type [-]",
-                                  "Anchoring [-]",
-                                  "Pattern type [0=square/1=triang.]",
-                                  "Pattern distance [m]",
-                                  "Pattern heading [deg]",
-                                  "Pattern X-position [m]",
-                                  "Pattern Y-position [m]",
-                                  "Prescribed depth [m]",
-                                  "Max. depth [m]",
-                                  "Pull back [m]",
-                                  "Cum. drain length [m]",
-                                  "Duration [s]",
-                                  "Max. force [kN]",
-                                  "Stitcher angle [deg]",
-                                  "ok",
-                                  "new roll",
-                                  "canceled",
-                                  "Log interval [m]",
-                                  "Data nr. [-]",
-                                  "Force [kN]"] 
-            df_default = pd.DataFrame(columns=header_default)
-            
-            for file_ in uploads:
-                for headerline in file_:
-                    headerline = str(headerline)
-                    if '#date' in headerline:
-                        break
-                headerline = headerline[:-3]
-                headerlist = headerline.replace("b'#", "").split(',')  
-                
-                if 'Remarks' in headerlist:
-                    headerlist.remove('Remarks')
-                    headerlist.remove('')
-                    for index, item in enumerate(headerlist):
-                        if ' [ok' in item:
-                            headerlist[index] = 'ok'
-                        if 'canceled]' in item:
-                            headerlist[index] = 'canceled'
-                            
-                df = pd.read_csv(file_, index_col=False, header=None)
-                
-                nums = list(range(len(headerlist)))
-                headerdict = dict(zip(nums, headerlist))    
-                df = df.rename(columns=headerdict)
-                
-                force_1_loc = df.columns.get_loc('Force [kN]')
-                df_force = df.iloc[:, force_1_loc+1:-1]
-                for col in range(len(df_force.columns)):
-                    df_force = df_force.rename(columns={df_force.columns[col] : f'Force_{col+2}'})
-                    
-                if radio3 == 'Default columns (recommended)':
-
-                    if not header_default == headerlist:
-                        df = pd.concat([df_default, df])
-    
-                    for col in df.columns:
-                        if col not in header_default:
-                            df = df.drop([col], axis=1)
-                elif radio3 == 'Columns from file':
-                    for col in df.columns:
-                        if type(col) == int:
-                            df = df.drop([col], axis=1)
-                    
-                df = pd.concat([df, df_force], axis=1)
-                
-                #####
-                list_.append(df)
-            
-            ### Sort list_ on df with most columns ##
-            a = max([x.shape[1] for x in list_])
-            indexa = [x.shape[1] for x in list_].index(a)
-            longest = list_[indexa]
-            del list_[indexa]
-            list_.insert(0, longest)
+            list_, headerlist = PVD_funcs.list_ext(uploads, radio3)
                         
             col1, col2 = st.columns([2,4])
             
@@ -359,16 +266,11 @@ def main():
             if start_button:
                 st.session_state.bool = not st.session_state.bool
                         
-            text = '''
-                        
-            ---
-            
-            '''
-            st.markdown(text)
+            st.markdown(horizontal_line)
             
             if st.session_state.bool:
                 with st.spinner(text='In progress...'):
-                    frame, wp_frame = PVD_funcs.convert(list_, headerlist, wp_select, fixed_nr)
+                    frame, time_text = PVD_funcs.convert(list_, headerlist, wp_select, fixed_nr)
                     
                     ## Output on screen ##    
                     col1, col2, col3 = st.columns(3)
@@ -387,24 +289,65 @@ def main():
                                                                           'Click here to download excel file!')
                     st.markdown(tmp_download_link, unsafe_allow_html=True)                  
                 
-                text = '''
-                        
-                ---
                 
-                '''
-                st.markdown(text)
+                st.markdown(horizontal_line)
                 
+                
+                st.write('**Preview:**')
                 PVD_funcs.show_preview(frame)
-                
-                text = '''
-                        
-                ---
-                
-                '''
-                st.markdown(text)
+
+
+                st.markdown(horizontal_line)
                 
                 
+                st.write('**Productivity:**')
+                col1, col2 = st.columns(2)
                 
+                base_units = []
+                dates = []
+                for file in list_:
+                    base_unit = file['Base unit [-]'].iloc[0]
+                    base_units.append(base_unit)
+                    date = file['date [YYYYMMDD]'].iloc[0]
+                    dates.append(date)
+                                
+                dates_str = [str(x) for x in dates]
+                dates_str = [x[6:]+'-'+x[4:6]+'-'+x[:4] for x in dates_str]
+                date_base_units = []
+                date_base_units = [dates_str[i] + ' / ' + base_units[i] for i in range(len(dates_str))]
+                date_base_units.sort()
+                date_base_unit = st.selectbox('Select date + base unit', date_base_units)
+                                
+                date, base_unit = date_base_unit.split(' / ')
+                day = datetime.datetime.strptime(date, '%d-%m-%Y').date()
+                
+                frame['time_text'] = time_text
+                frame_filtered = frame[(frame["Base unit [-]"]==base_unit) & (frame["date [YYYYMMDD]"] == day)]
+                
+                with st.expander('Properties'):
+                    col1, col2, col3 = st.columns(3)
+                    delta = col1.number_input('Delay time [minutes]', 
+                                              value=5, 
+                                              help='If no drain is installed in this time, it is counted as delay. Default is set to 5 minutes')
+                    delta = delta * 60
+                    
+                    start_of_shift = datetime.time((frame_filtered['time [HHMMSS]'].iloc[0]).hour, 0)
+                    start_time = col2.time_input('Start of shift', value=start_of_shift)
+                    start_time = start_time.strftime("%H%M%S")
+                    start_time = pd.Series([start_time])
+                    
+                    if frame_filtered['time [HHMMSS]'].iloc[-1] > datetime.time(23, 45):
+                        end_of_shift = datetime.time(23, 59)
+                    else:
+                        end_of_shift = datetime.time((frame_filtered['time [HHMMSS]'].iloc[-1]).hour + 1, 0)
+                    end_time = col3.time_input('End of shift', value=end_of_shift)
+                    end_time = end_time.strftime("%H%M%S")
+                    end_time = pd.Series([end_time])                
+                
+                PVD_funcs.show_delay(frame_filtered, delta, start_time, end_time, date, base_unit)
+                
+                st.markdown(horizontal_line)
+                st.caption('🏗️ New version under construction: https://cofra-cms-processing-tool.streamlitapp.com/')
                 
                 #dataFrameSerialization = "legacy"
                 #frame["drain_timedelta"] = pd.Timedelta(0)
@@ -439,11 +382,3 @@ def main():
 if __name__ == "__main__":
     main()
     
-## Export to a .csv file per pass ##
-#Passes = list(set(frame.Level))
-#for i in Passes:
-#    pass_frame = frame[frame.Level == i]
-#    pass_name = allFiles[0]
-#    pass_name = pass_name.split('_')
-#    pass_name = pass_name[0] + '_' + i
-#    pass_frame.to_excel(f'{pass_name}.xlsx')
